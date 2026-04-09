@@ -11,18 +11,14 @@ export const handler: SQSHandler = async (event) => {
   console.log("Event ", JSON.stringify(event));
 
   for (const record of event.Records) {
-    const recordBody = JSON.parse(record.body);
+    const recordBody = JSON.parse(record.body);        // SQS
+    const snsMessage = JSON.parse(recordBody.Message); // SNS
 
-    // S3 event is inside SQS message
-    if (recordBody.Records) {
-      console.log("Record body ", JSON.stringify(recordBody));
-
-      for (const messageRecord of recordBody.Records) {
-        const s3e = messageRecord.s3;
-
+    if (snsMessage.Records) {
+      for (const s3Message of snsMessage.Records) {
+        const s3e = s3Message.s3;
         const srcBucket = s3e.bucket.name;
 
-        // Handle spaces and special characters
         const srcKey = decodeURIComponent(
           s3e.object.key.replace(/\+/g, " ")
         );
@@ -33,12 +29,11 @@ export const handler: SQSHandler = async (event) => {
             Key: srcKey,
           };
 
-          // Download image (for demo purpose)
-          const image = await s3.send(new GetObjectCommand(params));
+          await s3.send(new GetObjectCommand(params));
 
-          console.log("Image fetched successfully:", srcKey);
+          console.log("Processed via SNS:", srcKey);
         } catch (error) {
-          console.log("Error fetching image:", error);
+          console.log(error);
         }
       }
     }
